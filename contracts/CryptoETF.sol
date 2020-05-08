@@ -1,49 +1,130 @@
 pragma solidity 0.6.7;
 
 import "./interfaces/ICryptoETF.sol";
+import "./interfaces/IUniswapV2Router01.sol";
+import "./interfaces/IERC20.sol";
 
-contract CryptoETF is ICryptoETF {
+import "./library/SafeMath.sol";
+import "./erc20/ERC20.sol";
+
+contract CryptoETF is ICryptoETF, ERC20 {
+
+    using SafeMath for uint256;
+
     IERC20 internal _baseToken;
 
-    IUniswapV2Router internal _router;
+    IUniswapV2Router01 internal _router;
 
     address[] internal _assets;
     mapping(address => uint256) internal _ratio;
     uint256 internal _slippage;
 
-    function puchase(uint256 _amount, uint256 _deadline) external override returns(uint256 amount){
+    constructor(address _base, address _uniswapRouter, address[] memory _tokens, uint256[] memory _percentage, uint256 _approvableSlippage) public {
+        _baseToken = IERC20(_base);
+        _router = IUniswapV2Router01(_uniswapRouter);
+        _assets = _tokens;
+        _setRatio(_percentage);
+        _slippage = _approvableSlippage;
+    }
+
+    function name() external view override returns(string memory tokenName) {
+        tokenName = "CryptoETF";
+    }
+
+    function symbol() external view override returns(string memory tokenSymbol) {
+        tokenSymbol = "cETF";
+    }
+
+    function decimals() external view override returns(uint8 tokenDecimals) {
+        tokenDecimals = 18;
+    }
+
+    function base() external view override returns(address token) {
+        token = address(_baseToken);
+    }
+
+    function tokens() external view override returns(address[] memory token) {
+        token = _assets;
+    }
+
+    function ratio(address _token) external view override returns(uint256 percentage) {
+        percentage = _ratio[_token];
+    }
+
+
+    function transfer(address _to, uint256 _amount) external override returns(bool success) {
+        success =  _transfer(msg.sender, _to, _amount);
+    }
+
+    function transferFrom(address _from, address _to, uint256 _amount) external override returns(bool success) {
+        _transfer(_from, _to, _amount);
+        _approve(_from, msg.sender, _allowances[_from][msg.sender].sub(_amount));
+        success = true;
+    }
+
+    function approve(address _spender, uint256 _amount) external override returns(bool success) {
+        success = _approve(msg.sender, _spender, _amount);
+    }
+
+    function purchase(uint256 _amount, uint256 _deadline) external override returns(uint256 amount){
         _baseToken.transferFrom(msg.sender, address(this), _amount);
         amount = _expectedCETF(_amount);
         for(uint256 i = 0; i < _assets.length ; i++) {
-            uint256 baseIn = _getBaseToAsset(i, _amount);
+            uint256 baseIn = _getAssetExchangeInput(i, _amount);
             // TODO change expected token output
             // DO NOT use uniswap as price table
-            uint256 assetOut = _router.getAmountsOut(_getTokenRatio, [address(_baseToken), _assets[i]]);
-            _router.swapExactTokenToTokens(baseIn, assetOut, [address(_baseToken), _assets[i]], msg.sender, _deadline);
+            address[] memory path = _toDynamicArray([address(_baseToken), _assets[i]]);
+            uint256 assetOut = _router.getAmountsOut(baseIn, path)[0];
+            uint256 received = _router.swapExactTokensForTokens(baseIn, assetOut, path, address(this), _deadline)[0];
         }
 
         _mint(msg.sender, amount);
         emit Purchase(msg.sender, _amount, amount);
     }
 
-    function expectedCETF(uint256 _baseAmount) external view returns(uint256 cETF) {
+    function expectedCETF(uint256 _baseAmount) external view override returns(uint256 cETF) {
         cETF = _expectedCETF(_baseAmount);
     }
 
-    function sell(uint256 _amount, uint256 _deadline) external returns(uint256 amount) {
+    function sell(uint256 _amount, uint256 _deadline) external override returns(uint256 amount) {
         uint256 assetValue = _getValueAsBase();
         for(uint256 i = 0; i < _assets.length; i++){
-            amount = amount.add(_sell(i, assetValue, _amount, _deadline));
+            uint256 received = _sell(i, assetValue, _amount, _deadline);
+            amount = amount.add(received);
         }
     }
 
-    function _sell(uint256 _assetIndex, uint256 _totalValue, uint256 _sellAmount, uint256 _deadline) external returns(uint256 amount) {
+    function rebalance(uint256[] calldata _percentage) external override returns(bool success) {
+        success = _setRatio(_percentage);
+    }
+
+    function _toDynamicArray(address[2] memory array) internal pure returns(address[] memory dynamic) {
+        dynamic = new address[](2);
+        dynamic[0] = array[0];
+        dynamic[1] = array[1];
+    }
+
+    function _setRatio(uint256[] memory _percentage) internal returns(bool success) {
+        require(_percentage.length == _assets.length, "SetRatio : Input lenght is different to asset length");
+        uint256 sum;
+        for(uint256 i = 0; i < _percentage.length; i++) {
+            sum = sum.add(_percentage[i]);
+            _ratio[_assets[i]] = _percentage[i];
+        }
+        require(sum == _hundred(), "SetRatio : Input does not sum to hundred");
+    }
+
+    function _getAssetExchangeInput(uint256 _assetIndex, uint256 _amount) internal view returns(uint256 amount){
+        return _amount.mul(_ratio[_assets[_assetIndex]]).div(_hundred());
+    }
+
+    function _sell(uint256 _assetIndex, uint256 _totalValue, uint256 _sellAmount, uint256 _deadline) internal returns(uint256 amount) {
         uint256 tokenIn = IERC20(_assets[_assetIndex]).balanceOf(address(this)).mul(_sellAmount).div(_totalValue);
         // TODO change expected token output
         // DO NOT use uniswap as price table
-        uint256 tokenOut = _router.getAmountsOut(tokenIn, [_assets[_assetIndex], address(_baseToken)]);
-        uint256[] temp = _router.swapExactTokenToTokens(tokenIn, tokenOut, [_assets[_assetIndex], address(_baseToken)], msg.sender, _deadline)[0];
-        amount = temp[0];
+        address[] memory path = _toDynamicArray([_assets[_assetIndex], address(_baseToken)]);
+        uint256 tokenOut = _router.getAmountsOut(tokenIn, path)[0];
+        amount = _router.swapExactTokensForTokens(tokenIn, tokenOut, path, msg.sender, _deadline)[0];
     }
 
     function _getBaseToAsset(uint256 _assetIndex, uint256 _amount) internal view returns(uint256 amount) {
@@ -58,12 +139,17 @@ contract CryptoETF is ICryptoETF {
         // TODO change to use Chain link as price table
         for(uint256 i = 0; i < _assets.length; i++) {
             uint256 assetBalance = IERC20(_assets[i]).balanceOf(address(this));
-            uint256 baseOut = _router.getAmountsOut(assetBalance, [_assets[i], address(_baseToken)]);
+            address[] memory path = _toDynamicArray([_assets[i], address(_baseToken)]);
+            uint256 baseOut = _router.getAmountsOut(assetBalance, path)[0];
             value = value.add(baseOut);
         }
     }
 
     function _expectedCETF(uint256 _baseAmount) internal view returns(uint256 cETF) {
-        cETF = _totalSupply.mul(_baseAmount).div(_getValueAsBase());
+        if(_getValueAsBase() == 0) {
+            cETF = _baseAmount;
+        } else {
+            cETF = _totalSupply.mul(_baseAmount).div(_getValueAsBase());
+        }
     }
 }
