@@ -9,6 +9,8 @@ interface ICryptoETF {
 
     function expectedCETF(uint256 _baseAmount) external view returns(uint256 cETF);
 
+    function base() external view returns(address baseToken);
+
     function tokens() external view returns(address[] token);
 
     function ratio(address _token) external view returns(uint256 amount);
