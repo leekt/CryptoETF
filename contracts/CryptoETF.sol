@@ -74,8 +74,7 @@ contract CryptoETF is ICryptoETF, ERC20 {
             // TODO change expected token output
             // DO NOT use uniswap as price table
             address[] memory path = _toDynamicArray([address(_baseToken), _assets[i]]);
-            uint256 assetOut = _router.getAmountsOut(baseIn, path)[0];
-            uint256 received = _router.swapExactTokensForTokens(baseIn, assetOut, path, address(this), _deadline)[0];
+            _router.swapExactTokensForTokens(baseIn, 1, path, address(this), _deadline)[0];
         }
 
         _mint(msg.sender, amount);
@@ -95,6 +94,7 @@ contract CryptoETF is ICryptoETF, ERC20 {
     }
 
     function rebalance(uint256[] calldata _percentage) external override returns(bool success) {
+        _sellAll();
         success = _setRatio(_percentage);
     }
 
@@ -104,14 +104,25 @@ contract CryptoETF is ICryptoETF, ERC20 {
         dynamic[1] = array[1];
     }
 
+    function _sellAll() internal returns(bool success) {
+        for(uint256 i = 0; i < _assets.length; i++){
+            address[] memory path = _toDynamicArray([_assets[i], address(_baseToken)]);
+            _router.swapExactTokensForTokens(IERC20(_assets[i]).balanceOf(address(this)), 1, path, address(this), now);
+        }
+        return true;
+    }
+
     function _setRatio(uint256[] memory _percentage) internal returns(bool success) {
         require(_percentage.length == _assets.length, "SetRatio : Input lenght is different to asset length");
         uint256 sum;
         for(uint256 i = 0; i < _percentage.length; i++) {
             sum = sum.add(_percentage[i]);
             _ratio[_assets[i]] = _percentage[i];
+            address[] memory path = _toDynamicArray([address(_baseToken), _assets[i]]);
+            _router.swapExactTokensForTokens(_getAssetExchangeInput(i,_baseToken.balanceOf(address(this))), 1, path, address(this), now)[0];
         }
         require(sum == _hundred(), "SetRatio : Input does not sum to hundred");
+        return true;
     }
 
     function _getAssetExchangeInput(uint256 _assetIndex, uint256 _amount) internal view returns(uint256 amount){
@@ -123,8 +134,7 @@ contract CryptoETF is ICryptoETF, ERC20 {
         // TODO change expected token output
         // DO NOT use uniswap as price table
         address[] memory path = _toDynamicArray([_assets[_assetIndex], address(_baseToken)]);
-        uint256 tokenOut = _router.getAmountsOut(tokenIn, path)[0];
-        amount = _router.swapExactTokensForTokens(tokenIn, tokenOut, path, msg.sender, _deadline)[0];
+        amount = _router.swapExactTokensForTokens(tokenIn, 1, path, msg.sender, _deadline)[0];
     }
 
     function _getBaseToAsset(uint256 _assetIndex, uint256 _amount) internal view returns(uint256 amount) {
