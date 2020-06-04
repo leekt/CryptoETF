@@ -1,4 +1,4 @@
-pragma solidity 0.6.7;
+pragma solidity 0.6.8;
 
 interface ICryptoETF {
     event Purchase(address customer, uint256 usdc, uint256 cetf);

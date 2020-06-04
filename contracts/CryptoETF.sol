@@ -1,4 +1,4 @@
-pragma solidity 0.6.7;
+pragma solidity 0.6.8;
 
 import "./interfaces/ICryptoETF.sol";
 import "./interfaces/IUniswapV2Router01.sol";
@@ -68,6 +68,7 @@ contract CryptoETF is ICryptoETF, ERC20 {
 
     function purchase(uint256 _amount, uint256 _deadline) external override returns(uint256 amount){
         _baseToken.transferFrom(msg.sender, address(this), _amount);
+        _baseToken.approve(address(_router), _amount);
         amount = _expectedCETF(_amount);
         for(uint256 i = 0; i < _assets.length ; i++) {
             uint256 baseIn = _getAssetExchangeInput(i, _amount);
@@ -95,7 +96,8 @@ contract CryptoETF is ICryptoETF, ERC20 {
 
     function rebalance(uint256[] calldata _percentage) external override returns(bool success) {
         _sellAll();
-        success = _setRatio(_percentage);
+        _setRatio(_percentage);
+        _buyAll();
     }
 
     function _toDynamicArray(address[2] memory array) internal pure returns(address[] memory dynamic) {
@@ -112,14 +114,20 @@ contract CryptoETF is ICryptoETF, ERC20 {
         return true;
     }
 
+    function _buyAll() internal returns(bool success) {
+        for(uint256 i = 0; i < _assets.length; i++) {
+            address[] memory path = _toDynamicArray([address(_baseToken), _assets[i]]);
+            _router.swapExactTokensForTokens(_getAssetExchangeInput(i,_baseToken.balanceOf(address(this))), 1, path, address(this), now)[0];
+        }
+    }
+
     function _setRatio(uint256[] memory _percentage) internal returns(bool success) {
         require(_percentage.length == _assets.length, "SetRatio : Input lenght is different to asset length");
         uint256 sum;
         for(uint256 i = 0; i < _percentage.length; i++) {
             sum = sum.add(_percentage[i]);
             _ratio[_assets[i]] = _percentage[i];
-            address[] memory path = _toDynamicArray([address(_baseToken), _assets[i]]);
-            _router.swapExactTokensForTokens(_getAssetExchangeInput(i,_baseToken.balanceOf(address(this))), 1, path, address(this), now)[0];
+            IERC20(_assets[i]).approve(address(_router), IERC20(_assets[i]).totalSupply());
         }
         require(sum == _hundred(), "SetRatio : Input does not sum to hundred");
         return true;
@@ -149,9 +157,13 @@ contract CryptoETF is ICryptoETF, ERC20 {
         // TODO change to use Chain link as price table
         for(uint256 i = 0; i < _assets.length; i++) {
             uint256 assetBalance = IERC20(_assets[i]).balanceOf(address(this));
-            address[] memory path = _toDynamicArray([_assets[i], address(_baseToken)]);
-            uint256 baseOut = _router.getAmountsOut(assetBalance, path)[0];
-            value = value.add(baseOut);
+            if(assetBalance == 0 ){
+                continue;
+            }else{
+                address[] memory path = _toDynamicArray([_assets[i], address(_baseToken)]);
+                uint256 baseOut = _router.getAmountsOut(assetBalance, path)[0];
+                value = value.add(baseOut);
+            }
         }
     }
 
