@@ -92,12 +92,15 @@ contract CryptoETF is ICryptoETF, ERC20 {
             uint256 received = _sell(i, assetValue, _amount, _deadline);
             amount = amount.add(received);
         }
+        _burn(msg.sender, _amount);
+        emit Sell(msg.sender, amount, _amount);
     }
 
     function rebalance(uint256[] calldata _percentage) external override returns(bool success) {
         _sellAll();
         _setRatio(_percentage);
         _buyAll();
+        success = true;
     }
 
     function _toDynamicArray(address[2] memory array) internal pure returns(address[] memory dynamic) {
