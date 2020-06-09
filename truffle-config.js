@@ -1,4 +1,4 @@
-const HDWalletProvider = require('truffle-hdwallet-provider');
+const HDWalletProvider = require('truffle-privatekey-provider');
 const KlaytnWalletProvider = require("truffle-hdwallet-provider-klaytn");
 const mnemonic = 'hello hello';
 const privateKey = '';
@@ -15,7 +15,7 @@ module.exports = {
     },
     ropsten: {
       provider: function() {
-        return new HDWalletProvider(mnemonic, `https://ropsten.infura.io/v3/${infuraKey}`);
+        return new HDWalletProvider(privateKey, ``);
       },
       port: 8545,
       network_id: '3',
