@@ -8,7 +8,7 @@ module.exports = {
   networks: {
     mainnet: {
       provider: function() {
-        return new HDWalletProvider(privateKey, `https://tn.henesis.io/ethereum/mainnet?clientId=a481485a958f1b82ac310ec4eea27943`);
+        return new HDWalletProvider(privateKey, ``);
       },
       port: 8545,
       skipDryRun: true,
@@ -17,7 +17,7 @@ module.exports = {
     },
     ropsten: {
       provider: function() {
-        return new HDWalletProvider(privateKey, `https://tn.henesis.io/ethereum/ropsten?clientId=a481485a958f1b82ac310ec4eea27943`);
+        return new HDWalletProvider(privateKey, ``);
       },
       port: 8545,
       network_id: '3',
