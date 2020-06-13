@@ -1,0 +1,611 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.2.7/web3.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css">
+    <script>
+      const CryptoETFABI = [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_base",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_uniswapRouter",
+              "type": "address"
+            },
+            {
+              "internalType": "address[]",
+              "name": "_tokens",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "_percentage",
+              "type": "uint256[]"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "Approval",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "currentOwner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "OwnershipTransferred",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "customer",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "usdc",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "cetf",
+              "type": "uint256"
+            }
+          ],
+          "name": "Purchase",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "customer",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "usdc",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "cetf",
+              "type": "uint256"
+            }
+          ],
+          "name": "Sell",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "Transfer",
+          "type": "event"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            }
+          ],
+          "name": "allowance",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "remaining",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            }
+          ],
+          "name": "balanceOf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "balance",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [],
+          "name": "owner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "ownerAddress",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [],
+          "name": "renounceOwnership",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "success",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "totalSupply",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "total",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "transferOwnership",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "success",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "name",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [],
+          "name": "symbol",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "tokenSymbol",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [],
+          "name": "decimals",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "tokenDecimals",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [],
+          "name": "base",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [],
+          "name": "tokens",
+          "outputs": [
+            {
+              "internalType": "address[]",
+              "name": "token",
+              "type": "address[]"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_token",
+              "type": "address"
+            }
+          ],
+          "name": "ratio",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "percentage",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "transfer",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "success",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_from",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "transferFrom",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "success",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_spender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "approve",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "success",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_deadline",
+              "type": "uint256"
+            }
+          ],
+          "name": "purchase",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_baseAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "expectedCETF",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "cETF",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "constant": true
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "_amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_deadline",
+              "type": "uint256"
+            }
+          ],
+          "name": "sell",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256[]",
+              "name": "_percentage",
+              "type": "uint256[]"
+            }
+          ],
+          "name": "rebalance",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "success",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ];
+      document.addEventListener('DOMContentLoaded', function(){
+        const ethEnabled = () => {
+          if (window.ethereum) {
+            window.web3 = new Web3(window.ethereum);
+            window.ethereum.enable();
+            return true;
+          }
+          return false;
+        }
+        if(!ethEnabled()){
+          alert("web3 not connected! check metamask");
+        }
+        else if(window.ethereum.networkVersion != 3) {
+          alert("change network to ropsten");
+        }
+        else {
+          window.etf = new web3.eth.Contract(CryptoETFABI, "0xC843270e6a2A88A9b7f1377a222515da9C06Cc3C");
+          window.tokenA = new web3.eth.Contract(CryptoETFABI, "0x8b65afda82c3ad82c356f75754217578c80bba1b");
+          window.tokenB = new web3.eth.Contract(CryptoETFABI, "0x7ec060933ee549112465d669e4ee239ae4927051");
+          window.tokenC = new web3.eth.Contract(CryptoETFABI, "0xe4cec046a6d60f94b94c09a1d7891fe675d2196d");
+        }
+      });
+
+      function purchase() {
+        const aAmount = document.getElementById("tokenAmount").value;
+        const data = window.etf.methods.purchase(aAmount, -1).encodeABI();
+        const transaction = {
+          nonce: '0x00', // ignored by MetaMask
+          gasPrice: '0x4A817C800', // customizable by user during MetaMask confirmation.
+          gas: '0xF4240', // customizable by user during MetaMask confirmation.
+          to: window.etf.options.address, // Required except during contract publications.
+          from: ethereum.selectedAddress, // must match user's active address.
+          value: '0x00', // Only required to send ether to the recipient from the initiating external account.
+          data: data,
+          chainId: 3, // Used to prevent transaction reuse across blockchains. Auto-filled by MetaMask.
+        };
+
+        window.ethereum.sendAsync(
+          {
+            method: 'eth_sendTransaction',
+            params: [transaction],
+            from: ethereum.selectedAddress,
+          });
+      }
+
+      function sell() {
+        const aAmount = document.getElementById("cETFAmount").value;
+        const data = window.etf.methods.sell(aAmount, -1).encodeABI();
+        const transaction = {
+          nonce: '0x00', // ignored by MetaMask
+          gasPrice: '0x4A817C800', // customizable by user during MetaMask confirmation.
+          gas: '0xF4240', // customizable by user during MetaMask confirmation.
+          to: window.etf.options.address, // Required except during contract publications.
+          from: ethereum.selectedAddress, // must match user's active address.
+          value: '0x00', // Only required to send ether to the recipient from the initiating external account.
+          data: data,
+          chainId: 3, // Used to prevent transaction reuse across blockchains. Auto-filled by MetaMask.
+        };
+
+        window.ethereum.sendAsync(
+          {
+            method: 'eth_sendTransaction',
+            params: [transaction],
+            from: ethereum.selectedAddress,
+          });
+
+      }
+
+    </script>
+  </head>
+  <body>
+    <nav>
+      <ul>
+        <li>Home</li>
+        <li><a href="status.html">Status</a></li>
+        <li><a href="logs.html">Logs</a></li>
+        <li><a href="admin.html">Admin</a></li>
+      </ul>
+    </nav>
+    <div style="  display: flex; align-items: center; justify-content: center;">
+      <div>
+        <div class="" style="width:448px; float:left">
+          <form id="purchaseForm">
+            <header>
+              <h3> Purchase ETF</h3>
+            </header>
+            <label>BaseCoin Amount</label> <input id="tokenAmount" style="width:400" type="text" class="amount" />
+            <button onclick="purchase()" type="button">Purchase</button>
+            <header>
+              <h3> Sell ETF</h3>
+            </header>
+            <label>cETF amount</label> <input id="cETFAmount", style="width:400" type="text" class="cETFAmount" />
+            <button onclick="sell()" type="button" >Sell</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

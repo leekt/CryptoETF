@@ -1,13 +1,14 @@
-pragma solidity 0.6.8;
+pragma solidity 0.6.10;
 
 import "./interfaces/ICryptoETF.sol";
 import "./interfaces/IUniswapV2Router01.sol";
 import "./interfaces/IERC20.sol";
 
 import "./library/SafeMath.sol";
+import "./library/Ownable.sol";
 import "./erc20/ERC20.sol";
 
-contract CryptoETF is ICryptoETF, ERC20 {
+contract CryptoETF is ICryptoETF, ERC20, Ownable {
 
     using SafeMath for uint256;
 
@@ -17,14 +18,12 @@ contract CryptoETF is ICryptoETF, ERC20 {
 
     address[] internal _assets;
     mapping(address => uint256) internal _ratio;
-    uint256 internal _slippage;
 
-    constructor(address _base, address _uniswapRouter, address[] memory _tokens, uint256[] memory _percentage, uint256 _approvableSlippage) public {
+    constructor(address _base, address _uniswapRouter, address[] memory _tokens, uint256[] memory _percentage) public {
         _baseToken = IERC20(_base);
         _router = IUniswapV2Router01(_uniswapRouter);
         _assets = _tokens;
         _setRatio(_percentage);
-        _slippage = _approvableSlippage;
     }
 
     function name() external view override returns(string memory tokenName) {
@@ -87,20 +86,20 @@ contract CryptoETF is ICryptoETF, ERC20 {
     }
 
     function sell(uint256 _amount, uint256 _deadline) external override returns(uint256 amount) {
-        uint256 assetValue = _getValueAsBase();
         for(uint256 i = 0; i < _assets.length; i++){
-            uint256 received = _sell(i, assetValue, _amount, _deadline);
+            uint256 received = _sell(i, _amount, _deadline);
             amount = amount.add(received);
         }
         _burn(msg.sender, _amount);
         emit Sell(msg.sender, amount, _amount);
     }
 
-    function rebalance(uint256[] calldata _percentage) external override returns(bool success) {
+    function rebalance(uint256[] calldata _percentage) external onlyOwner override returns(bool success) {
         _sellAll();
         _setRatio(_percentage);
         _buyAll();
         success = true;
+        emit Rebalance(_assets, _percentage);
     }
 
     function _toDynamicArray(address[2] memory array) internal pure returns(address[] memory dynamic) {
@@ -112,16 +111,24 @@ contract CryptoETF is ICryptoETF, ERC20 {
     function _sellAll() internal returns(bool success) {
         for(uint256 i = 0; i < _assets.length; i++){
             address[] memory path = _toDynamicArray([_assets[i], address(_baseToken)]);
-            _router.swapExactTokensForTokens(IERC20(_assets[i]).balanceOf(address(this)), 1, path, address(this), now);
+            uint256 amount = IERC20(_assets[i]).balanceOf(address(this));
+            if(amount>0){
+                IERC20(_assets[i]).approve(address(_router), amount);
+                _router.swapExactTokensForTokens(amount, 1, path, address(this), now);
+            }
         }
-        return true;
+        success = true;
     }
 
     function _buyAll() internal returns(bool success) {
+        uint256 baseAmount = _baseToken.balanceOf(address(this));
+        _baseToken.approve(address(_router),baseAmount);
         for(uint256 i = 0; i < _assets.length; i++) {
             address[] memory path = _toDynamicArray([address(_baseToken), _assets[i]]);
-            _router.swapExactTokensForTokens(_getAssetExchangeInput(i,_baseToken.balanceOf(address(this))), 1, path, address(this), now)[0];
+            _router.swapExactTokensForTokens(_getAssetExchangeInput(i,baseAmount), 1, path, address(this), now)[0];
         }
+        _baseToken.transfer(msg.sender,_baseToken.balanceOf(address(this)));
+        success = true;
     }
 
     function _setRatio(uint256[] memory _percentage) internal returns(bool success) {
@@ -130,7 +137,6 @@ contract CryptoETF is ICryptoETF, ERC20 {
         for(uint256 i = 0; i < _percentage.length; i++) {
             sum = sum.add(_percentage[i]);
             _ratio[_assets[i]] = _percentage[i];
-            IERC20(_assets[i]).approve(address(_router), IERC20(_assets[i]).totalSupply());
         }
         require(sum == _hundred(), "SetRatio : Input does not sum to hundred");
         return true;
@@ -140,8 +146,10 @@ contract CryptoETF is ICryptoETF, ERC20 {
         return _amount.mul(_ratio[_assets[_assetIndex]]).div(_hundred());
     }
 
-    function _sell(uint256 _assetIndex, uint256 _totalValue, uint256 _sellAmount, uint256 _deadline) internal returns(uint256 amount) {
-        uint256 tokenIn = IERC20(_assets[_assetIndex]).balanceOf(address(this)).mul(_sellAmount).div(_totalValue);
+    function _sell(uint256 _assetIndex, uint256 _sellAmount, uint256 _deadline) internal returns(uint256 amount) {
+        uint256 tokenIn = IERC20(_assets[_assetIndex]).balanceOf(address(this)).mul(_sellAmount).div(_totalSupply);
+
+        IERC20(_assets[_assetIndex]).approve(address(_router), tokenIn);
         // TODO change expected token output
         // DO NOT use uniswap as price table
         address[] memory path = _toDynamicArray([_assets[_assetIndex], address(_baseToken)]);
@@ -171,7 +179,7 @@ contract CryptoETF is ICryptoETF, ERC20 {
     }
 
     function _expectedCETF(uint256 _baseAmount) internal view returns(uint256 cETF) {
-        if(_getValueAsBase() == 0) {
+        if(_totalSupply == 0) {
             cETF = _baseAmount;
         } else {
             cETF = _totalSupply.mul(_baseAmount).div(_getValueAsBase());

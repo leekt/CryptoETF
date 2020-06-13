@@ -11,7 +11,7 @@ const uniswapV2Router01 = require('@uniswap/v2-periphery/build/UniswapV2Router01
 const UniswapV2Router01 = Contract(uniswapV2Router01);
 
 const CryptoETF = artifacts.require('CryptoETF');
-
+const BN = web3.utils.BN;
 const TOTALSUPPLY = new web3.utils.BN('1000000000000000000000000');
 
 contract('CryptoETF', function(account) {
@@ -20,6 +20,7 @@ contract('CryptoETF', function(account) {
     Erc20.setProvider(web3.currentProvider);
     this.tokenA = await Erc20.new(TOTALSUPPLY, {from:deployer});
     this.tokenB = await Erc20.new(TOTALSUPPLY, {from:deployer});
+    this.tokenC = await Erc20.new(TOTALSUPPLY, {from:deployer});
     Weth.setProvider(web3.currentProvider);
     this.weth = await Weth.new({from:deployer});
     UniswapV2Factory.setProvider(web3.currentProvider);
@@ -30,13 +31,22 @@ contract('CryptoETF', function(account) {
 
   it('test', async function(){
     await this.factory.createPair(this.tokenA.address, this.tokenB.address, {from:deployer});
+    await this.factory.createPair(this.tokenA.address, this.tokenC.address, {from:deployer});
     await this.tokenA.approve(this.router.address, -1, {from:deployer});
     await this.tokenB.approve(this.router.address, -1, {from:deployer});
+    await this.tokenC.approve(this.router.address, -1, {from:deployer});
     await this.router.addLiquidity(this.tokenA.address, this.tokenB.address,10000,40000,0,0,deployer,-1,{from:deployer});
-    this.etf = await CryptoETF.new(this.tokenA.address, this.router.address, [this.tokenB.address], [new web3.utils.BN('100000000000000000000')], 0, {from:deployer});
-
+    await this.router.addLiquidity(this.tokenA.address, this.tokenC.address,10000,40000,0,0,deployer,-1,{from:deployer});
+    this.etf = await CryptoETF.new(this.tokenA.address, this.router.address, [this.tokenC.address, this.tokenB.address],
+                                   [
+                                     new web3.utils.BN('50000000000000000000'),
+                                     new web3.utils.BN('50000000000000000000'),
+                                   ],
+                                   {from:deployer});
     await this.tokenA.approve(this.etf.address, -1, {from:deployer});
-    await this.etf.purchase(100, -1, {from:deployer});
+    const receipt = await this.etf.purchase(100, -1, {from:deployer});
+    console.log(receipt);
+    await this.etf.sell(100, -1, {from:deployer});
   });
 });
 

@@ -8,18 +8,21 @@ module.exports = {
   networks: {
     mainnet: {
       provider: function() {
-        return new HDWalletProvider(mnemonic, `https://mainnet.infura.io/v3/${infurakey}`);
+        return new HDWalletProvider(privateKey, `https://tn.henesis.io/ethereum/mainnet?clientId=a481485a958f1b82ac310ec4eea27943`);
       },
       port: 8545,
+      skipDryRun: true,
       network_id: 1,
+      gasPrice: 30000000000
     },
     ropsten: {
       provider: function() {
-        return new HDWalletProvider(privateKey, ``);
+        return new HDWalletProvider(privateKey, `https://tn.henesis.io/ethereum/ropsten?clientId=a481485a958f1b82ac310ec4eea27943`);
       },
       port: 8545,
       network_id: '3',
       skipDryRun: true,
+      gasPrice: 40000000000
     },
     rinkeby: {
       provider: function() {
@@ -57,7 +60,7 @@ module.exports = {
 
   compilers: {
     solc: {
-      version: '0.6.8',
+      version: '0.6.10',
       settings: {
         optimizer: {
           enabled: true,

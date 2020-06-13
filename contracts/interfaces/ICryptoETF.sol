@@ -1,8 +1,9 @@
-pragma solidity 0.6.8;
+pragma solidity 0.6.10;
 
 interface ICryptoETF {
     event Purchase(address customer, uint256 usdc, uint256 cetf);
     event Sell(address customer, uint256 usdc, uint256 cetf);
+    event Rebalance(address[] tokens, uint256[] ratio);
 
     function purchase(uint256 _amount, uint256 _deadline) external returns(uint256 amount);
 
