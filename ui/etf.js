@@ -526,145 +526,108 @@ const CryptoETFABI = [
 ];
 
 function setContract(){
-  window.etf = new web3.eth.Contract(CryptoETFABI, "0xC843270e6a2A88A9b7f1377a222515da9C06Cc3C");
-  window.tokenA = new web3.eth.Contract(CryptoETFABI, "0x8b65afda82c3ad82c356f75754217578c80bba1b");
-  window.tokenB = new web3.eth.Contract(CryptoETFABI, "0x7ec060933ee549112465d669e4ee239ae4927051");
-  window.tokenC = new web3.eth.Contract(CryptoETFABI, "0xe4cec046a6d60f94b94c09a1d7891fe675d2196d");
+  window.etf = new window.web3.eth.Contract(CryptoETFABI, "0xC843270e6a2A88A9b7f1377a222515da9C06Cc3C");
+  window.tokenA = new window.web3.eth.Contract(CryptoETFABI, "0x8b65afda82c3ad82c356f75754217578c80bba1b");
+  window.tokenB = new window.web3.eth.Contract(CryptoETFABI, "0x7ec060933ee549112465d669e4ee239ae4927051");
+  window.tokenC = new window.web3.eth.Contract(CryptoETFABI, "0xe4cec046a6d60f94b94c09a1d7891fe675d2196d");
+}
+
+function trimAddress(address){
+  console.log(address);
+  return address.substring(0,10) + "..." + address.substring(34);
+}
+
+function appendToPurchaseTable(x) {
+  if(window.purchaseStamp < x.blockNumber*10000 + x.logIndex){
+    // Insert a row in the table at the last row
+    const newRow   = window.tablePurchase.insertRow();
+
+    // Insert a cell in the row at index 0
+    const addressCell  = newRow.insertCell(0);
+
+    // Append a text node to the cell
+    const address  = document.createElement('a');
+    address.href = "https://ropsten.etherscan.io/address/" + x.returnValues.customer;
+    address.innerText = trimAddress(x.returnValues.customer);
+    addressCell.appendChild(address);
+
+    // Insert a cell in the row at index 0
+    const cetfCell  = newRow.insertCell(1);
+
+    // Append a text node to the cell
+    const cetf  = document.createTextNode(x.returnValues.cetf);
+    cetfCell.appendChild(cetf);
+
+    // Insert a cell in the row at index 0
+    const baseCell  = newRow.insertCell(2);
+
+    // Append a text node to the cell
+    const baseAmount  = document.createTextNode(x.returnValues.usdc);
+    baseCell.appendChild(baseAmount);
+    window.purchaseStamp = x.blockNumber*10000 + x.logIndex;
+    console.log("PURCHASE : " + window.purchaseStamp);
+  }
+}
+
+function appendToSellTable(x) {
+  if(window.sellStamp < x.blockNumber*10000 + x.logIndex){
+    // Insert a row in the table at the last row
+    const newRow   = window.tableSell.insertRow();
+
+    // Insert a cell in the row at index 0
+    const addressCell  = newRow.insertCell(0);
+
+    // Append a text node to the cell
+    const address  = document.createElement('a');
+    address.href = "https://ropsten.etherscan.io/address/" + x.returnValues.customer;
+    address.innerText = trimAddress(x.returnValues.customer);
+    addressCell.appendChild(address);
+
+    // Insert a cell in the row at index 0
+    const cetfCell  = newRow.insertCell(1);
+
+    // Append a text node to the cell
+    const cetf  = document.createTextNode(x.returnValues.cetf);
+    cetfCell.appendChild(cetf);
+
+    // Insert a cell in the row at index 0
+    const baseCell  = newRow.insertCell(2);
+
+    // Append a text node to the cell
+    const baseAmount  = document.createTextNode(x.returnValues.usdc);
+    baseCell.appendChild(baseAmount);
+    window.sellStamp = x.blockNumber*10000 + x.logIndex;
+    console.log("SELL : " + window.sellStamp);
+  }
 }
 
 function setTableData(){
-  var tablePurchase = document.getElementById('purchaselogs').getElementsByTagName('tbody')[0];
-  var tableSell = document.getElementById('selllogs').getElementsByTagName('tbody')[0];
+  window.tablePurchase = document.getElementById('purchaselogs').getElementsByTagName('tbody')[0];
+  window.tableSell = document.getElementById('selllogs').getElementsByTagName('tbody')[0];
 
-  let purchaseStamp=0;
-  let sellStamp=0;
+  window.purchaseStamp=0;
+  window.sellStamp=0;
 
   window.etf.events.Purchase()
   .on('data', function(event) {
-    if(purchaseStamp < event.blockNumber*10000 + event.logIndex){
-      // Insert a row in the table at the last row
-      const newRow   = tablePurchase.insertRow();
-
-      // Insert a cell in the row at index 0
-      const addressCell  = newRow.insertCell(0);
-
-      // Append a text node to the cell
-      const address  = document.createTextNode(event.returnValues.customer);
-      addressCell.appendChild(address);
-
-      // Insert a cell in the row at index 0
-      const cetfCell  = newRow.insertCell(1);
-
-      // Append a text node to the cell
-      const cetf  = document.createTextNode(event.returnValues.cetf);
-      cetfCell.appendChild(cetf);
-
-      // Insert a cell in the row at index 0
-      const baseCell  = newRow.insertCell(2);
-
-      // Append a text node to the cell
-      const baseAmount  = document.createTextNode(event.returnValues.usdc);
-      baseCell.appendChild(baseAmount);
-
-      purchaseStamp = event.blockNumber*10000 + event.logIndex;
-      console.log("PURCHASE : " + purchaseStamp);
-    }
+    appendToPurchaseTable(event);
   });
   window.etf.events.Sell()
   .on('data', function(event) {
-    if(sellStamp < event.blockNumber*10000 + event.logIndex){
-      // Insert a row in the table at the last row
-      const newRow   = tableSell.insertRow();
-
-      // Insert a cell in the row at index 0
-      const addressCell  = newRow.insertCell(0);
-
-      // Append a text node to the cell
-      const address  = document.createTextNode(event.returnValues.customer);
-      addressCell.appendChild(address);
-
-      // Insert a cell in the row at index 0
-      const cetfCell  = newRow.insertCell(1);
-
-      // Append a text node to the cell
-      const cetf  = document.createTextNode(event.returnValues.cetf);
-      cetfCell.appendChild(cetf);
-
-      // Insert a cell in the row at index 0
-      const baseCell  = newRow.insertCell(2);
-
-      // Append a text node to the cell
-      const baseAmount  = document.createTextNode(event.returnValues.usdc);
-      baseCell.appendChild(baseAmount);
-      sellStamp = event.blockNumber*10000 + event.logIndex;
-      console.log("SELL : " + sellStamp);
-    }
+    appendToSellTable(event);
   });
   window.etf.getPastEvents("Purchase", {
     fromBlock:8083779
   },function(error, event){
     event.forEach(x=> {
-      if(purchaseStamp < x.blockNumber*10000 + x.logIndex){
-        // Insert a row in the table at the last row
-        const newRow   = tablePurchase.insertRow();
-
-        // Insert a cell in the row at index 0
-        const addressCell  = newRow.insertCell(0);
-
-        // Append a text node to the cell
-        const address  = document.createTextNode(x.returnValues.customer);
-        addressCell.appendChild(address);
-
-        // Insert a cell in the row at index 0
-        const cetfCell  = newRow.insertCell(1);
-
-        // Append a text node to the cell
-        const cetf  = document.createTextNode(x.returnValues.cetf);
-        cetfCell.appendChild(cetf);
-
-        // Insert a cell in the row at index 0
-        const baseCell  = newRow.insertCell(2);
-
-        // Append a text node to the cell
-        const baseAmount  = document.createTextNode(x.returnValues.usdc);
-        baseCell.appendChild(baseAmount);
-        purchaseStamp = x.blockNumber*10000 + x.logIndex;
-        console.log("PURCHASE : " + purchaseStamp);
-      }
-
+      appendToPurchaseTable(x);
     });
   });
   window.etf.getPastEvents("Sell", {
     fromBlock:8083779
   },function(error, event){
     event.forEach(x=> {
-      if(sellStamp < x.blockNumber*10000 + x.logIndex){
-        // Insert a row in the table at the last row
-        const newRow   = tableSell.insertRow();
-
-        // Insert a cell in the row at index 0
-        const addressCell  = newRow.insertCell(0);
-
-        // Append a text node to the cell
-        const address  = document.createTextNode(x.returnValues.customer);
-        addressCell.appendChild(address);
-
-        // Insert a cell in the row at index 0
-        const cetfCell  = newRow.insertCell(1);
-
-        // Append a text node to the cell
-        const cetf  = document.createTextNode(x.returnValues.cetf);
-        cetfCell.appendChild(cetf);
-
-        // Insert a cell in the row at index 0
-        const baseCell  = newRow.insertCell(2);
-
-        // Append a text node to the cell
-        const baseAmount  = document.createTextNode(x.returnValues.usdc);
-        baseCell.appendChild(baseAmount);
-        sellStamp = x.blockNumber*10000 + x.logIndex;
-        console.log("SELL : " + sellStamp);
-      }
+      appendToSellTable(x);
     });
   });
 }
@@ -693,6 +656,28 @@ function rebalance() {
       from: ethereum.selectedAddress,
     });
 }
+
+function approveAll() {
+  const data = window.tokenA.methods.approve(window.etf.options.address, -1).encodeABI();
+  const transaction = {
+    nonce: '0x00', // ignored by MetaMask
+    gasPrice: '0x4A817C800', // customizable by user during MetaMask confirmation.
+    gas: '0xF4240', // customizable by user during MetaMask confirmation.
+    to: window.tokenA.options.address, // Required except during contract publications.
+    from: ethereum.selectedAddress, // must match user's active address.
+    value: '0x00', // Only required to send ether to the recipient from the initiating external account.
+    data: data,
+    chainId: 3, // Used to prevent transaction reuse across blockchains. Auto-filled by MetaMask.
+  };
+
+  window.ethereum.sendAsync(
+    {
+      method: 'eth_sendTransaction',
+      params: [transaction],
+      from: ethereum.selectedAddress,
+    });
+}
+
 
 function purchase() {
   const aAmount = document.getElementById("tokenAmount").value;
@@ -769,3 +754,20 @@ function getBalance(address, balanceType) {
 }
 
 
+function ethEnabled(callback) {
+  ethereum.sendAsync({
+    method: 'eth_requestAccounts',
+  }, (error, response)=>{
+    if(error) {
+      alert("web3 not connected! check metamask");
+    }
+    console.log(response);
+    const accounts = response.result
+    console.log(accounts);
+    // You now have an array of accounts!
+    // Currently only ever one, e.g.:
+    // ['0xFDEa65C8e26263F6d9A1B5de9555D2931A33b825']
+    window.web3 = new Web3(window.ethereum);
+    callback();
+  });
+}

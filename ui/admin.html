@@ -1,38 +1,53 @@
 <html>
   <head>
     <meta charset="utf-8">
+    <meta id="viewport" name="viewport" />
+
+    <script type="text/javascript">
+      //mobile viewport hack
+    (function(){
+
+      function apply_viewport(){
+        if( /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent)   ) {
+
+          var ww = window.screen.width;
+          var mw = 540; // min width of site
+          var ratio =  ww / mw; //calculate ratio
+          var viewport_meta_tag = document.getElementById('viewport');
+          if( ww < mw){ //smaller than minimum size
+            viewport_meta_tag.setAttribute('content', 'initial-scale=' + ratio + ', maximum-scale=' + ratio + ', minimum-scale=' + ratio + ', user-scalable=no, width=' + mw);
+          }
+          else { //regular size
+            viewport_meta_tag.setAttribute('content', 'initial-scale=1.0, maximum-scale=1, minimum-scale=1.0, user-scalable=yes, width=' + ww);
+          }
+        }
+      }
+
+      //ok, i need to update viewport scale if screen dimentions changed
+      window.addEventListener('resize', function(){
+        apply_viewport();
+      });
+
+      apply_viewport();
+
+    }());
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.2.7/web3.min.js" charset="utf-8"></script>
     <link rel="stylesheet" href="https://unpkg.com/mvp.css">
     <script src="etf.js" charset="utf-8"></script>
     <script>
       document.addEventListener('DOMContentLoaded', function(){
-        const ethEnabled = () => {
-          if (window.ethereum) {
-            window.web3 = new Web3(window.ethereum);
-            window.ethereum.enable();
-            return true;
-          }
-          return false;
-        }
-        if(!ethEnabled()){
-          alert("web3 not connected! check metamask");
-        }
-        else if(window.ethereum.networkVersion != 3) {
-          alert("change network to ropsten");
-        }
-        else {
-          setContract()
-        }
+        ethEnabled(setContract);
       });
     </script>
   </head>
   <body>
-    <nav style="display: flex; align-items: center; justify-content: center;">
+      <nav style="margin: 0px 0px 36px;display: flex; align-items: center; justify-content: center;">
       <ul>
-        <li><a href="index.html">Home</a></li>
-        <li><a href="status.html">Status</a></li>
-        <li><a href="logs.html">Logs</a></li>
-        <li>Admin</li>
+        <li style="font-size:1.25em"><a href="index.html">Home</a></li>
+        <li style="font-size:1.25em"><a href="status.html">Status</a></li>
+        <li style="font-size:1.25em"><a href="logs.html">Logs</a></li>
+        <li style="font-size:1.25em">Admin</li>
       </ul>
     </nav>
     <div style="  display: flex; align-items: center; justify-content: center;">
